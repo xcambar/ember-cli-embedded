@@ -5,8 +5,16 @@ import { module, test } from 'qunit';
 import Resolver from 'ember-resolver';
 import { run } from '@ember/runloop';
 
+import type { TestContext } from 'ember-test-helpers';
+import type ApplicationInstance from '@ember/application/instance';
+
+interface Context extends TestContext {
+  TestApplication: typeof Application;
+  appInstance: ApplicationInstance;
+}
+
 module('Unit | Instance Initializer | embedded', function (hooks) {
-  hooks.beforeEach(function () {
+  hooks.beforeEach(function (this: Context) {
     this.TestApplication = class TestApplication extends Application {
       modulePrefix = 'random_value';
     };
@@ -24,12 +32,12 @@ module('Unit | Instance Initializer | embedded', function (hooks) {
     this.appInstance = this.application.buildInstance();
   });
 
-  hooks.afterEach(function () {
+  hooks.afterEach(function (this: Context) {
     run(this.appInstance, 'destroy');
     run(this.application, 'destroy');
   });
 
-  test('It works without config', async function (assert) {
+  test('It works without config', async function (this: Context, assert) {
     assert.expect(1);
 
     this.application.register('config:environment', {
@@ -41,7 +49,7 @@ module('Unit | Instance Initializer | embedded', function (hooks) {
     assert.ok(true, 'It does not break');
   });
 
-  test('It merges the embedded config into the `APP` config', async function (assert) {
+  test('The embedded config is merged into `APP` config', async function (this: Context, assert) {
     assert.expect(1);
 
     this.application.register('config:environment', {
