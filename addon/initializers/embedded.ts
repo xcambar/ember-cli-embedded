@@ -47,8 +47,8 @@ function normalizeConfig(userConfig:GivenConfig):ObjectConfig {
   return Object.assign({ config: {} }, userConfig)
 }
 
-export function initialize():void {
-  const application:Application = arguments[1] || arguments[0]
+export function initialize(...args: [ Application, Application? ]): void {
+  const application = args[1] ?? args[0]
   const env = application.resolveRegistration('config:environment')
 
   let appConfig:GivenConfig = get(env, 'embedded')
