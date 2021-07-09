@@ -32,7 +32,7 @@ function normalizeConfig(userConfig:GivenConfig):ObjectConfig {
   }
 
   if (configIsBoolean(userConfig)) {
-    let embeddedConfig = { delegateStart: userConfig, config: {} }
+    const embeddedConfig = { delegateStart: userConfig, config: {} }
     deprecate('The `embedded` config property MUST be undefined or an an object', false, { id: 'bad-object-config', until: '1.0.0' })
     return embeddedConfig
   }
@@ -51,9 +51,9 @@ export function initialize():void {
   const application:Application = arguments[1] || arguments[0]
   const env = application.resolveRegistration('config:environment')
 
-  let appConfig:GivenConfig = get(env, 'embedded')
+  const appConfig:GivenConfig = get(env, 'embedded')
 
-  let embeddedConfig:ObjectConfig = normalizeConfig(appConfig)
+  const embeddedConfig:ObjectConfig = normalizeConfig(appConfig)
 
   if (embeddedConfig.delegateStart) {
     // @ts-ignore
