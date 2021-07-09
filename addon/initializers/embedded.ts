@@ -1,9 +1,6 @@
-import EmberApplication from '@ember/application'
-import EmberObject from '@ember/object'
+import Application from '@ember/application'
 import { deprecate } from '@ember/application/deprecations'
 import { run } from '@ember/runloop'
-
-type Application = EmberApplication & EmberObject
 
 interface ObjectConfig {
   delegateStart: boolean,
@@ -46,8 +43,7 @@ function normalizeConfig(userConfig:GivenConfig):ObjectConfig {
   return Object.assign({ config: {} }, userConfig)
 }
 
-export function initialize(...args):void {
-  const application:Application = args[1] || args[0]
+export function initialize(application: Application): void {
   const env = application.resolveRegistration('config:environment')
   const embeddedConfig: ObjectConfig = normalizeConfig(env.embedded)
 
