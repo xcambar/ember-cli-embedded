@@ -50,5 +50,14 @@ module.exports = {
       plugins: ['node'],
       extends: ['plugin:node/recommended'],
     },
+    {
+      files: ['**/*.ts'],
+      rules: {
+        // These 2 rules are already covered by the TypeScript compiler (`tsc`)
+        '@typescript-eslint/no-unused-vars': 'off',
+        'no-undef': 'off',
+        'no-unused-vars': 'off',
+      },
+    },
   ],
 };
