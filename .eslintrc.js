@@ -26,6 +26,9 @@ module.exports = {
   rules: {
     // --- TypeScript rules
 
+    // This rule is overriden and configured in the `overrides` Array below
+    '@typescript-eslint/explicit-module-boundary-types': 'off',
+
     'no-empty-function': 'off',
     '@typescript-eslint/no-empty-function': ['error'],
   },
@@ -58,6 +61,16 @@ module.exports = {
       },
       plugins: ['node'],
       extends: ['plugin:node/recommended'],
+    },
+
+    // TypeScript related
+
+    {
+      // enable the rule specifically for TypeScript files
+      files: ['*.ts'],
+      rules: {
+        '@typescript-eslint/explicit-module-boundary-types': ['error'],
+      },
     },
   ],
 };
