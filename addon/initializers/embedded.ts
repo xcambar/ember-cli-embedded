@@ -2,7 +2,6 @@ import EmberApplication from '@ember/application'
 import EmberObject from '@ember/object'
 import { deprecate } from '@ember/application/deprecations'
 import { run } from '@ember/runloop'
-import { get } from '@ember/object'
 
 type Application = EmberApplication & EmberObject
 
@@ -50,10 +49,7 @@ function normalizeConfig(userConfig:GivenConfig):ObjectConfig {
 export function initialize(...args):void {
   const application:Application = args[1] || args[0]
   const env = application.resolveRegistration('config:environment')
-
-  const appConfig:GivenConfig = get(env, 'embedded')
-
-  const embeddedConfig:ObjectConfig = normalizeConfig(appConfig)
+  const embeddedConfig: ObjectConfig = normalizeConfig(env.embedded)
 
   if (embeddedConfig.delegateStart) {
     // @ts-ignore
