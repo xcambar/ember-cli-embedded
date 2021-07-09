@@ -23,7 +23,12 @@ module.exports = {
   env: {
     browser: true,
   },
-  rules: {},
+  rules: {
+    // --- TypeScript rules
+
+    'no-empty-function': 'off',
+    '@typescript-eslint/no-empty-function': ['error'],
+  },
   overrides: [
     // node files
     {
