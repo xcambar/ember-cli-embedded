@@ -1,14 +1,16 @@
-import EmberApplication from '@ember/application'
-import EmberObject from '@ember/object'
+import Application from '@ember/application'
 import { deprecate } from '@ember/application/deprecations'
 import { run } from '@ember/runloop'
-import { get } from '@ember/object'
-
-type Application = EmberApplication & EmberObject
 
 interface ObjectConfig {
-  delegateStart: boolean,
-  config: any
+  delegateStart?:
+    | undefined
+    | boolean
+
+  config?:
+    | undefined
+    | Record<string, never> // empty object `{}`
+    | Record<string, unknown>
 }
 
 type VoidConfig = null|undefined
@@ -26,37 +28,41 @@ function configIsBoolean(config:GivenConfig): config is DeprecatedBooleanConfig 
   return typeof config === 'boolean'
 }
 
+function configIsObjectUnknown(config: ObjectConfig): config is Record<string, unknown> {
+  return (
+    config.delegateStart === undefined
+    && config.config === undefined
+  )
+}
+
 function normalizeConfig(userConfig:GivenConfig):ObjectConfig {
   if (configIsVoid(userConfig)) {
     return { delegateStart: false, config: {} }
   }
 
   if (configIsBoolean(userConfig)) {
-    let embeddedConfig = { delegateStart: userConfig, config: {} }
+    const embeddedConfig = { delegateStart: userConfig, config: {} }
     deprecate('The `embedded` config property MUST be undefined or an an object', false, { id: 'bad-object-config', until: '1.0.0' })
     return embeddedConfig
   }
 
-  if (userConfig.delegateStart === undefined) {
+  if (configIsObjectUnknown(userConfig)) {
     deprecate('The config MUST contain a `delegateStart` property. Assuming `true` for backward compatibility. The config must now be defined in a `config` property', false, { id: 'bad-object-config', until: '1.0.0' })
     return {
       delegateStart: true,
       config: userConfig
     }
   }
+
   return Object.assign({ config: {} }, userConfig)
 }
 
-export function initialize():void {
-  const application:Application = arguments[1] || arguments[0]
+export function initialize(application: Application): void {
   const env = application.resolveRegistration('config:environment')
-
-  let appConfig:GivenConfig = get(env, 'embedded')
-
-  let embeddedConfig:ObjectConfig = normalizeConfig(appConfig)
+  const embeddedConfig: ObjectConfig = normalizeConfig(env.embedded)
 
   if (embeddedConfig.delegateStart) {
-    // @ts-ignore
+    // @ts-ignore: until correct public types are available
     application.reopen({
       start: run.bind(application, function emberCliEmbeddedStart(config = {}) {
         const _embeddedConfig = Object.assign(
