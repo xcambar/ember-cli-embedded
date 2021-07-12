@@ -5,8 +5,25 @@ import { module, test } from 'qunit';
 import Resolver from 'ember-resolver';
 import { run } from '@ember/runloop';
 
+import type { TestContext } from 'ember-test-helpers';
+
+interface Context extends TestContext {
+  TestApplication: typeof Application;
+
+  // different key to not conflict with `application` from `TestContext`
+  app: TestContext['application'] & {
+    // Public types are currently incomplete, these 2 properties exist:
+    // https://github.com/emberjs/ember.js/blob/79f130f779a58969b98d079acf7d0e83c81dae63/packages/%40ember/application/lib/application.js#L376-L377
+    _booted: boolean;
+    _readinessDeferrals: number;
+
+    // The method added by our Initializer `embedded`
+    start?: (config?: Record<string, unknown>) => void;
+  };
+}
+
 module('Unit | Initializer | embedded', function (hooks) {
-  hooks.beforeEach(function () {
+  hooks.beforeEach(function (this: Context) {
     this.TestApplication = class TestApplication extends Application {
       modulePrefix = 'something_random';
     };
@@ -16,123 +33,125 @@ module('Unit | Initializer | embedded', function (hooks) {
       initialize,
     });
 
-    this.application = this.TestApplication.create({
+    // `as any` to bypass temporarily the types check as public types are incomplete.
+    // Otherwise it complains about the missing properties `_booted` etc
+    this.app = this.TestApplication.create({
       autoboot: false,
       Resolver,
-    });
+    }) as any;
 
-    this.application.register('config:environment', {});
+    this.app.register('config:environment', {});
   });
 
-  hooks.afterEach(function () {
-    run(this.application, 'destroy');
+  hooks.afterEach(function (this: Context) {
+    run(this.app, 'destroy');
   });
 
-  test('by default, it does not change the normal behaviour', async function (assert) {
+  test('by default, it does not change the normal behaviour', async function (this: Context, assert) {
     assert.expect(3);
 
-    await this.application.boot();
+    await this.app.boot();
 
     assert.strictEqual(
-      this.application.start,
+      this.app.start,
       undefined,
       'No `start()` method has been added'
     );
 
     assert.deepEqual(
-      this.application.resolveRegistration('config:embedded'),
+      this.app.resolveRegistration('config:embedded'),
       {},
       'An empty embedded config is registered'
     );
 
     assert.ok(
-      this.application._booted === true && this.application._readinessDeferrals === 0,
+      this.app._booted === true && this.app._readinessDeferrals === 0,
       'No deferral has been added'
     );
   });
 
-  test('without `delegateStart`, it does not change the normal behaviour', async function (assert) {
+  test('without `delegateStart`, it does not change the normal behaviour', async function (this: Context, assert) {
     assert.expect(3);
 
-    this.application.register('config:environment', {
+    this.app.register('config:environment', {
       embedded: {
         delegateStart: false,
       },
     });
 
-    await this.application.boot();
+    await this.app.boot();
 
     assert.strictEqual(
-      this.application.start,
+      this.app.start,
       undefined,
       'No `start()` method has been added'
     );
 
     assert.deepEqual(
-      this.application.resolveRegistration('config:embedded'),
+      this.app.resolveRegistration('config:embedded'),
       {},
       'An empty embedded config is registered'
     );
 
     assert.ok(
-      this.application._booted === true && this.application._readinessDeferrals === 0,
+      this.app._booted === true && this.app._readinessDeferrals === 0,
       'No deferral has been added'
     );
   });
 
-  test('without `delegateStart`, the specified config is registered', async function (assert) {
+  test('without `delegateStart`, the specified config is registered', async function (this: Context, assert) {
     assert.expect(1);
 
     const myCustomConfig = {
       donald: 'duck',
     };
 
-    this.application.register('config:environment', {
+    this.app.register('config:environment', {
       embedded: {
         delegateStart: false,
         config: myCustomConfig,
       },
     });
 
-    await this.application.boot();
+    await this.app.boot();
 
     assert.deepEqual(
-      this.application.resolveRegistration('config:embedded'),
+      this.app.resolveRegistration('config:embedded'),
       myCustomConfig,
       'The embedded config matches the custom config'
     );
   });
 
-  test('with `delegateStart`, it defers the boot of the app', function (assert) {
+  test('with `delegateStart`, it defers the boot of the app', function (this: Context, assert) {
     assert.expect(3);
 
-    this.application.register('config:environment', {
+    this.app.register('config:environment', {
       embedded: {
         delegateStart: true,
       },
     });
 
-    const { _readinessDeferrals: initialDeferrals } = this.application;
+    const { _readinessDeferrals: initialDeferrals } = this.app;
 
     /**
-     * Cannot use `application.boot()` here as this would imply triggering the readiness deferral
+     * Cannot use `app.boot()` here as this would imply triggering the readiness deferral
      * and the resulting promise (of the boot) would never resolve.
      */
-    initialize(this.application);
+    initialize(this.app);
 
     assert.strictEqual(
-      typeof this.application.start,
+      typeof this.app.start,
       'function',
       'A `start()` method has been added'
     );
 
     assert.deepEqual(
-      this.application.resolveRegistration('config:embedded'),
+      this.app.resolveRegistration('config:embedded'),
       undefined,
       'The embedded config is not registered until the app is started'
     );
 
-    const { _booted, _readinessDeferrals } = this.application;
+    const { _booted, _readinessDeferrals } = this.app;
 
     assert.ok(
       _booted === false && _readinessDeferrals === initialDeferrals + 1,
@@ -140,14 +159,14 @@ module('Unit | Initializer | embedded', function (hooks) {
     );
   });
 
-  test('with `delegateStart`, the passed config is not registered until the app is started', function (assert) {
+  test('with `delegateStart`, the passed config is not registered until the app is started', function (this: Context, assert) {
     assert.expect(1);
 
     const myCustomConfig = {
       donald: 'duck',
     };
 
-    this.application.register('config:environment', {
+    this.app.register('config:environment', {
       embedded: {
         delegateStart: true,
         config: myCustomConfig,
@@ -155,19 +174,19 @@ module('Unit | Initializer | embedded', function (hooks) {
     });
 
     /**
-     * Cannot use `application.boot()` here as this would imply triggering the readiness deferral
+     * Cannot use `app.boot()` here as this would imply triggering the readiness deferral
      * and the resulting promise (of the boot) would never resolve.
      */
-    initialize(this.application);
+    initialize(this.app);
 
     assert.deepEqual(
-      this.application.resolveRegistration('config:embedded'),
+      this.app.resolveRegistration('config:embedded'),
       undefined,
       'The embedded config is not registered until the app is started'
     );
   });
 
-  test('at manual boot, the passed config is merged into the embedded config', function (assert) {
+  test('at manual boot, the passed config is merged into the embedded config', function (this: Context, assert) {
     assert.expect(1);
 
     const myCustomConfig = {
@@ -175,7 +194,7 @@ module('Unit | Initializer | embedded', function (hooks) {
       hey: 'sup?',
     };
 
-    this.application.register('config:environment', {
+    this.app.register('config:environment', {
       embedded: {
         delegateStart: true,
         config: myCustomConfig,
@@ -183,18 +202,19 @@ module('Unit | Initializer | embedded', function (hooks) {
     });
 
     /**
-     * Cannot use `application.boot()` here as this would imply triggering the readiness deferral
+     * Cannot use `app.boot()` here as this would imply triggering the readiness deferral
      * and the resulting promise (of the boot) would never resolve.
      */
-    initialize(this.application);
+    initialize(this.app);
 
-    this.application.start({
+    // Previous tests confirm that, at this point, `.start()` is defined
+    this.app.start!({
       yay: 'one more',
       yo: 'new config',
     });
 
     assert.deepEqual(
-      this.application.resolveRegistration('config:embedded'),
+      this.app.resolveRegistration('config:embedded'),
       {
         yo: 'new config',
         hey: 'sup?',
@@ -204,27 +224,28 @@ module('Unit | Initializer | embedded', function (hooks) {
     );
   });
 
-  test('at manual boot, one deferral is removed', function (assert) {
+  test('at manual boot, one deferral is removed', function (this: Context, assert) {
     assert.expect(1);
 
-    this.application.register('config:environment', {
+    this.app.register('config:environment', {
       embedded: {
         delegateStart: true,
       },
     });
 
     /**
-     * Cannot use `application.boot()` here as this would imply triggering the readiness deferral
+     * Cannot use `app.boot()` here as this would imply triggering the readiness deferral
      * and the resulting promise (of the boot) would never resolve.
      */
-    initialize(this.application);
+    initialize(this.app);
 
-    const { _readinessDeferrals: initialDeferrals } = this.application;
+    const { _readinessDeferrals: initialDeferrals } = this.app;
 
-    this.application.start();
+    // Previous tests confirm that, at this point, `.start()` is defined
+    this.app.start!();
 
     assert.strictEqual(
-      this.application._readinessDeferrals,
+      this.app._readinessDeferrals,
       initialDeferrals - 1,
       'A deferral has been removed'
     );
